@@ -15,6 +15,9 @@ var _ RegistryProviders = (*registryProviders)(nil)
 //
 // TFE API docs: https://www.terraform.io/docs/cloud/api/providers.html
 type RegistryProviders interface {
+	// List all the providers within an organization.
+	List(ctx context.Context, organization string, options *RegistryProviderListOptions) (*RegistryProviderList, error)
+
 	// Create a registry provider
 	Create(ctx context.Context, organization string, options RegistryProviderCreateOptions) (*RegistryProvider, error)
 
@@ -35,8 +38,8 @@ type RegistryName string
 
 // List of available registry names
 const (
-	Private RegistryName = "private"
-	Public  RegistryName = "public"
+	PrivateRegistry RegistryName = "private"
+	PublicRegistry  RegistryName = "public"
 )
 
 // RegistryProvider represents a registry provider
@@ -50,40 +53,57 @@ type RegistryProvider struct {
 	UpdatedAt    string                       `jsonapi:"attr,updated-at"`
 
 	// Relations
-	Organization *Organization `jsonapi:"relation,organization"`
+	Organization             *Organization             `jsonapi:"relation,organization"`
+	RegistryProviderVersions []RegistryProviderVersion `jsonapi:"relation,registry-provider-version"`
 }
 
 type RegistryProviderPermissions struct {
 	CanDelete bool `jsonapi:"attr,can-delete"`
 }
 
-// RegistryProviderVersion represents a registry provider version
-type RegistryProviderVersion struct {
-	ID        string   `jsonapi:"primary,registry-provider-versions"`
-	Version   string   `jsonapi:"attr,version"`
-	KeyID     string   `jsonapi:"attr,key-id"`
-	Protocols []string `jsonapi:"attr,protocols,omitempty"`
-
-	// Relations
-	RegistryProvider *RegistryProvider `jsonapi:"relation,registry-provider"`
-
-	// Links
-	Links map[string]interface{} `jsonapi:"links,omitempty"`
+type RegistryProviderListOptions struct {
+	ListOptions
+	// A query string to filter by registry_name
+	RegistryName *RegistryName `url:"filter[registry_name],omitempty"`
+	// A query string to filter by organization
+	OrganizationName *string `url:"filter[organization_name],omitempty"`
+	// A query string to do a fuzzy search
+	Search *string `url:"q,omitempty"`
 }
 
-// RegistryProviderPlatform represents a registry provider platform
-type RegistryProviderPlatform struct {
-	ID       string `jsonapi:"primary,registry-provider-platforms"`
-	Os       string `jsonapi:"attr,os"`
-	Arch     string `jsonapi:"attr,arch"`
-	Filename string `jsonapi:"attr,filename"`
-	SHASUM   string `jsonapi:"attr,shasum"`
+type RegistryProviderList struct {
+	*Pagination
+	Items []*RegistryProvider
+}
 
-	// Relations
-	RegistryProviderVersion *RegistryProviderVersion `jsonapi:"relation,registry-provider-version"`
+func (o RegistryProviderListOptions) valid() error {
+	return nil
+}
 
-	// Links
-	Links map[string]interface{} `jsonapi:"links,omitempty"`
+func (r *registryProviders) List(ctx context.Context, organization string, options *RegistryProviderListOptions) (*RegistryProviderList, error) {
+
+	if !validStringID(&organization) {
+		return nil, ErrInvalidOrg
+	}
+	if options != nil {
+		if err := options.valid(); err != nil {
+			return nil, err
+		}
+	}
+
+	u := fmt.Sprintf("organizations/%s/registry-providers", url.QueryEscape(organization))
+	req, err := r.client.newRequest("GET", u, options)
+	if err != nil {
+		return nil, err
+	}
+
+	pl := &RegistryProviderList{}
+	err = r.client.do(ctx, req, pl)
+	if err != nil {
+		return nil, err
+	}
+
+	return pl, nil
 }
 
 // RegistryProviderCreateOptions is used when creating a registry provider
@@ -127,7 +147,7 @@ func (r *registryProviders) Create(ctx context.Context, organization string, opt
 	}
 	// Private providers must match their namespace and organization name
 	// This is enforced by the API as well
-	if *options.RegistryName == Private && organization != *options.Namespace {
+	if *options.RegistryName == PrivateRegistry && organization != *options.Namespace {
 		return nil, errors.New("namespace must match organization name for private providers")
 	}
 

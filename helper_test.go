@@ -757,10 +757,10 @@ func createPrivateRegistryProvider(t *testing.T, client *Client, org *Organizati
 
 	ctx := context.Background()
 
-	privateName := Private
+	privateName := PrivateRegistry
 
 	options := RegistryProviderCreateOptions{
-		Name:         String("name"),
+		Name:         String("tst-name-" + randomString(t)),
 		Namespace:    &org.Name,
 		RegistryName: &privateName,
 	}
@@ -791,11 +791,11 @@ func createPublicRegistryProvider(t *testing.T, client *Client, org *Organizatio
 
 	ctx := context.Background()
 
-	publicName := Public
+	publicName := PublicRegistry
 
 	options := RegistryProviderCreateOptions{
-		Name:         String("name"),
-		Namespace:    String("namespace"),
+		Name:         String("tst-name-" + randomString(t)),
+		Namespace:    String("tst-namespace-" + randomString(t)),
 		RegistryName: &publicName,
 	}
 	prv, err := client.RegistryProviders.Create(ctx, org.Name, options)

@@ -9,6 +9,140 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestRegistryProvidersList(t *testing.T) {
+	client := testClient(t)
+	ctx := context.Background()
+
+	t.Run("with providers", func(t *testing.T) {
+		orgTest, orgTestCleanup := createOrganization(t, client)
+		defer orgTestCleanup()
+
+		createN := 10
+		providers := make([]*RegistryProvider, 0)
+		// these providers will be destroyed when the org is cleaned up
+		for i := 0; i < createN; i++ {
+			providerTest, _ := createPublicRegistryProvider(t, client, orgTest)
+			providers = append(providers, providerTest)
+		}
+		for i := 0; i < createN; i++ {
+			providerTest, _ := createPrivateRegistryProvider(t, client, orgTest)
+			providers = append(providers, providerTest)
+		}
+		providerN := len(providers)
+		publicProviderN := createN
+
+		t.Run("returns all providers", func(t *testing.T) {
+			returnedProviders, err := client.RegistryProviders.List(ctx, orgTest.Name, &RegistryProviderListOptions{
+				ListOptions: ListOptions{
+					PageNumber: 0,
+					PageSize:   providerN,
+				},
+			})
+			require.NoError(t, err)
+			assert.NotEmpty(t, returnedProviders.Items)
+			assert.Equal(t, providerN, returnedProviders.TotalCount)
+			assert.Equal(t, 1, returnedProviders.TotalPages)
+			for _, rp := range returnedProviders.Items {
+				foundProvider := false
+				for _, p := range providers {
+					if rp.ID == p.ID {
+						foundProvider = true
+						break
+					}
+				}
+				assert.True(t, foundProvider, "Expected to find provider %s but did not:\nexpected:\n%v\nreturned\n%v", rp.ID, providers, returnedProviders)
+			}
+		})
+
+		t.Run("returns pages", func(t *testing.T) {
+			pageN := 2
+			pageSize := providerN / pageN
+
+			for page := 0; page < pageN; page++ {
+				testName := fmt.Sprintf("returns page %d of providers", page)
+				t.Run(testName, func(t *testing.T) {
+					returnedProviders, err := client.RegistryProviders.List(ctx, orgTest.Name, &RegistryProviderListOptions{
+						ListOptions: ListOptions{
+							PageNumber: page,
+							PageSize:   pageSize,
+						},
+					})
+					require.NoError(t, err)
+					assert.NotEmpty(t, returnedProviders.Items)
+					assert.Equal(t, providerN, returnedProviders.TotalCount)
+					assert.Equal(t, pageN, returnedProviders.TotalPages)
+					assert.Equal(t, pageSize, len(returnedProviders.Items))
+					for _, rp := range returnedProviders.Items {
+						foundProvider := false
+						for _, p := range providers {
+							if rp.ID == p.ID {
+								foundProvider = true
+								break
+							}
+						}
+						assert.True(t, foundProvider, "Expected to find provider %s but did not:\nexpected:\n%v\nreturned\n%v", rp.ID, providers, returnedProviders)
+					}
+				})
+			}
+		})
+
+		t.Run("filters on registry name", func(t *testing.T) {
+			publicName := PublicRegistry
+			returnedProviders, err := client.RegistryProviders.List(ctx, orgTest.Name, &RegistryProviderListOptions{
+				RegistryName: &publicName,
+				ListOptions: ListOptions{
+					PageNumber: 0,
+					PageSize:   providerN,
+				},
+			})
+			require.NoError(t, err)
+			assert.NotEmpty(t, returnedProviders.Items)
+			assert.Equal(t, publicProviderN, returnedProviders.TotalCount)
+			assert.Equal(t, 1, returnedProviders.TotalPages)
+			for _, rp := range returnedProviders.Items {
+				foundProvider := false
+				for _, p := range providers {
+					if rp.ID == p.ID {
+						foundProvider = true
+						break
+					}
+				}
+				assert.Equal(t, publicName, rp.RegistryName)
+				assert.True(t, foundProvider, "Expected to find provider %s but did not:\nexpected:\n%v\nreturned\n%v", rp.ID, providers, returnedProviders)
+			}
+		})
+
+		t.Run("searches", func(t *testing.T) {
+			expectedProvider := providers[0]
+			returnedProviders, err := client.RegistryProviders.List(ctx, orgTest.Name, &RegistryProviderListOptions{
+				Search: &expectedProvider.Name,
+				ListOptions: ListOptions{
+					PageNumber: 0,
+					PageSize:   providerN,
+				},
+			})
+			require.NoError(t, err)
+			assert.NotEmpty(t, returnedProviders.Items)
+			assert.Equal(t, 1, returnedProviders.TotalCount)
+			assert.Equal(t, 1, returnedProviders.TotalPages)
+			foundProvider := returnedProviders.Items[0]
+
+			assert.Equal(t, foundProvider.ID, expectedProvider.ID, "Expected to find provider %s but did not:\nexpected:\n%v\nreturned\n%v", expectedProvider.ID, providers, returnedProviders)
+		})
+	})
+
+	t.Run("without providers", func(t *testing.T) {
+		orgTest, orgTestCleanup := createOrganization(t, client)
+		defer orgTestCleanup()
+
+		providers, err := client.RegistryProviders.List(ctx, orgTest.Name, nil)
+		require.NoError(t, err)
+		assert.Empty(t, providers.Items)
+		assert.Equal(t, 0, providers.TotalCount)
+		assert.Equal(t, 0, providers.TotalPages)
+	})
+}
+
 func TestRegistryProvidersCreate(t *testing.T) {
 	client := testClient(t)
 	ctx := context.Background()
@@ -16,8 +150,8 @@ func TestRegistryProvidersCreate(t *testing.T) {
 	orgTest, orgTestCleanup := createOrganization(t, client)
 	defer orgTestCleanup()
 
-	publicName := Public
-	privateName := Private
+	publicName := PublicRegistry
+	privateName := PrivateRegistry
 
 	t.Run("with valid options", func(t *testing.T) {
 
@@ -152,11 +286,11 @@ func TestRegistryProvidersRead(t *testing.T) {
 	providerContexts := []ProviderContext{
 		{
 			ProviderCreator: createPublicRegistryProvider,
-			RegistryName:    Public,
+			RegistryName:    PublicRegistry,
 		},
 		{
 			ProviderCreator: createPrivateRegistryProvider,
-			RegistryName:    Private,
+			RegistryName:    PrivateRegistry,
 		},
 	}
 
@@ -173,6 +307,19 @@ func TestRegistryProvidersRead(t *testing.T) {
 				assert.Equal(t, registryProviderTest.Name, prv.Name)
 				assert.Equal(t, registryProviderTest.Namespace, prv.Namespace)
 				assert.Equal(t, registryProviderTest.RegistryName, prv.RegistryName)
+
+				t.Run("permissions are properly decoded", func(t *testing.T) {
+					assert.True(t, prv.Permissions.CanDelete)
+				})
+
+				t.Run("relationships are properly decoded", func(t *testing.T) {
+					assert.Equal(t, orgTest.Name, prv.Organization.Name)
+				})
+
+				t.Run("timestamps are properly decoded", func(t *testing.T) {
+					assert.NotEmpty(t, prv.CreatedAt)
+					assert.NotEmpty(t, prv.UpdatedAt)
+				})
 			})
 
 			t.Run("when the registry provider does not exist", func(t *testing.T) {
@@ -231,11 +378,11 @@ func TestRegistryProvidersDelete(t *testing.T) {
 	providerContexts := []ProviderContext{
 		{
 			ProviderCreator: createPublicRegistryProvider,
-			RegistryName:    Public,
+			RegistryName:    PublicRegistry,
 		},
 		{
 			ProviderCreator: createPrivateRegistryProvider,
-			RegistryName:    Private,
+			RegistryName:    PrivateRegistry,
 		},
 	}
 
