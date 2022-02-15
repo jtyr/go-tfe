@@ -17,6 +17,12 @@ var _ RegistryProviders = (*registryProviders)(nil)
 type RegistryProviders interface {
 	// Create a registry provider
 	Create(ctx context.Context, organization string, options RegistryProviderCreateOptions) (*RegistryProvider, error)
+
+	// Read a registry provider
+	Read(ctx context.Context, organization string, registryName RegistryName, namespace string, name string, options *RegistryProviderReadOptions) (*RegistryProvider, error)
+
+	// Delete a registry provider
+	Delete(ctx context.Context, organization string, registryName RegistryName, namespace string, name string) error
 }
 
 // registryProviders implements RegistryProviders.
@@ -106,7 +112,7 @@ func (o RegistryProviderCreateOptions) valid() error {
 	if !validStringID(o.Namespace) {
 		return errors.New("invalid value for namespace")
 	}
-	if o.RegistryName == nil {
+	if !validString((*string)(o.RegistryName)) {
 		return errors.New("registry-name is required")
 	}
 	return nil
@@ -140,4 +146,83 @@ func (r *registryProviders) Create(ctx context.Context, organization string, opt
 	}
 
 	return prv, nil
+}
+
+type RegistryProviderReadOptions struct {
+}
+
+func (r *registryProviders) Read(ctx context.Context, organization string, registryName RegistryName, namespace string, name string, options *RegistryProviderReadOptions) (*RegistryProvider, error) {
+	if !validStringID(&organization) {
+		return nil, ErrInvalidOrg
+	}
+	if !validString(&name) {
+		return nil, ErrRequiredName
+	}
+	if !validStringID(&name) {
+		return nil, ErrInvalidName
+	}
+	if !validString(&namespace) {
+		return nil, errors.New("namespace is required")
+	}
+	if !validStringID(&namespace) {
+		return nil, errors.New("invalid value for namespace")
+	}
+	if !validString((*string)(&registryName)) {
+		return nil, errors.New("registry-name is required")
+	}
+
+	u := fmt.Sprintf(
+		"organizations/%s/registry-providers/%s/%s/%s",
+		url.QueryEscape(organization),
+		url.QueryEscape(string(registryName)),
+		url.QueryEscape(namespace),
+		url.QueryEscape(name),
+	)
+	req, err := r.client.newRequest("GET", u, options)
+	if err != nil {
+		return nil, err
+	}
+
+	prv := &RegistryProvider{}
+	err = r.client.do(ctx, req, prv)
+	if err != nil {
+		return nil, err
+	}
+
+	return prv, nil
+}
+
+func (r *registryProviders) Delete(ctx context.Context, organization string, registryName RegistryName, namespace string, name string) error {
+	if !validStringID(&organization) {
+		return ErrInvalidOrg
+	}
+	if !validString(&name) {
+		return ErrRequiredName
+	}
+	if !validStringID(&name) {
+		return ErrInvalidName
+	}
+	if !validString(&namespace) {
+		return errors.New("namespace is required")
+	}
+	if !validStringID(&namespace) {
+		return errors.New("invalid value for namespace")
+	}
+	if !validString((*string)(&registryName)) {
+		return errors.New("registry-name is required")
+	}
+
+	u := fmt.Sprintf(
+		"organizations/%s/registry-providers/%s/%s/%s",
+		url.QueryEscape(organization),
+		url.QueryEscape(string(registryName)),
+		url.QueryEscape(namespace),
+		url.QueryEscape(name),
+	)
+	req, err := r.client.newRequest("DELETE", u, nil)
+	if err != nil {
+		return err
+	}
+
+	return r.client.do(ctx, req, nil)
 }
