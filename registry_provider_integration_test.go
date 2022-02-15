@@ -301,7 +301,14 @@ func TestRegistryProvidersRead(t *testing.T) {
 				registryProviderTest, providerTestCleanup := prvCtx.ProviderCreator(t, client, orgTest)
 				defer providerTestCleanup()
 
-				prv, err := client.RegistryProviders.Read(ctx, orgTest.Name, registryProviderTest.RegistryName, registryProviderTest.Namespace, registryProviderTest.Name, nil)
+				id := RegistryProviderID{
+					OrganizationName: orgTest.Name,
+					RegistryName:     registryProviderTest.RegistryName,
+					Namespace:        registryProviderTest.Namespace,
+					Name:             registryProviderTest.Name,
+				}
+
+				prv, err := client.RegistryProviders.Read(ctx, id, nil)
 				assert.NoError(t, err)
 				assert.NotEmpty(t, prv.ID)
 				assert.Equal(t, registryProviderTest.Name, prv.Name)
@@ -323,41 +330,17 @@ func TestRegistryProvidersRead(t *testing.T) {
 			})
 
 			t.Run("when the registry provider does not exist", func(t *testing.T) {
-				_, err := client.RegistryProviders.Read(ctx, orgTest.Name, prvCtx.RegistryName, "nonexistent", "nonexistent", nil)
+				id := RegistryProviderID{
+					OrganizationName: orgTest.Name,
+					RegistryName:     prvCtx.RegistryName,
+					Namespace:        "nonexistent",
+					Name:             "nonexistent",
+				}
+				_, err := client.RegistryProviders.Read(ctx, id, nil)
 				assert.Error(t, err)
 				// Local TFC/E will return a forbidden here when TFC/E is in development mode
 				// In non development mode this returns a 404
 				assert.Equal(t, ErrResourceNotFound, err)
-			})
-
-			t.Run("without a name", func(t *testing.T) {
-				_, err := client.RegistryProviders.Read(ctx, orgTest.Name, prvCtx.RegistryName, "namespace", "", nil)
-				assert.EqualError(t, err, ErrRequiredName.Error())
-			})
-
-			t.Run("with an invalid name", func(t *testing.T) {
-				_, err := client.RegistryProviders.Read(ctx, orgTest.Name, prvCtx.RegistryName, "namespace", badIdentifier, nil)
-				assert.EqualError(t, err, ErrInvalidName.Error())
-			})
-
-			t.Run("without a namespace", func(t *testing.T) {
-				_, err := client.RegistryProviders.Read(ctx, orgTest.Name, prvCtx.RegistryName, "", "name", nil)
-				assert.EqualError(t, err, "namespace is required")
-			})
-
-			t.Run("with an invalid namespace", func(t *testing.T) {
-				_, err := client.RegistryProviders.Read(ctx, orgTest.Name, prvCtx.RegistryName, badIdentifier, "name", nil)
-				assert.EqualError(t, err, "invalid value for namespace")
-			})
-
-			t.Run("without a registry-name", func(t *testing.T) {
-				_, err := client.RegistryProviders.Read(ctx, orgTest.Name, "", "namespace", "name", nil)
-				assert.EqualError(t, err, "registry-name is required")
-			})
-
-			t.Run("without a valid organization", func(t *testing.T) {
-				_, err := client.RegistryProviders.Read(ctx, badIdentifier, prvCtx.RegistryName, "namespace", "name", nil)
-				assert.EqualError(t, err, ErrInvalidOrg.Error())
 			})
 		})
 	}
@@ -392,51 +375,109 @@ func TestRegistryProvidersDelete(t *testing.T) {
 			t.Run("with valid provider", func(t *testing.T) {
 				registryProviderTest, _ := prvCtx.ProviderCreator(t, client, orgTest)
 
-				err := client.RegistryProviders.Delete(ctx, orgTest.Name, registryProviderTest.RegistryName, registryProviderTest.Namespace, registryProviderTest.Name)
+				id := RegistryProviderID{
+					OrganizationName: orgTest.Name,
+					RegistryName:     registryProviderTest.RegistryName,
+					Namespace:        registryProviderTest.Namespace,
+					Name:             registryProviderTest.Name,
+				}
+
+				err := client.RegistryProviders.Delete(ctx, id)
 				require.NoError(t, err)
 
-				prv, err := client.RegistryProviders.Read(ctx, orgTest.Name, registryProviderTest.RegistryName, registryProviderTest.Namespace, registryProviderTest.Name, nil)
+				prv, err := client.RegistryProviders.Read(ctx, id, nil)
 				assert.Nil(t, prv)
 				assert.Error(t, err)
 			})
 
 			t.Run("when the registry provider does not exist", func(t *testing.T) {
-				err := client.RegistryProviders.Delete(ctx, orgTest.Name, prvCtx.RegistryName, "nonexistent", "nonexistent")
+				id := RegistryProviderID{
+					OrganizationName: orgTest.Name,
+					RegistryName:     prvCtx.RegistryName,
+					Namespace:        "nonexistent",
+					Name:             "nonexistent",
+				}
+				err := client.RegistryProviders.Delete(ctx, id)
 				assert.Error(t, err)
 				// Local TFC/E will return a forbidden here when TFC/E is in development mode
 				// In non development mode this returns a 404
 				assert.Equal(t, ErrResourceNotFound, err)
 			})
-
-			t.Run("without a name", func(t *testing.T) {
-				err := client.RegistryProviders.Delete(ctx, orgTest.Name, prvCtx.RegistryName, "namespace", "")
-				assert.EqualError(t, err, ErrRequiredName.Error())
-			})
-
-			t.Run("with an invalid name", func(t *testing.T) {
-				err := client.RegistryProviders.Delete(ctx, orgTest.Name, prvCtx.RegistryName, "namespace", badIdentifier)
-				assert.EqualError(t, err, ErrInvalidName.Error())
-			})
-
-			t.Run("without a namespace", func(t *testing.T) {
-				err := client.RegistryProviders.Delete(ctx, orgTest.Name, prvCtx.RegistryName, "", "name")
-				assert.EqualError(t, err, "namespace is required")
-			})
-
-			t.Run("with an invalid namespace", func(t *testing.T) {
-				err := client.RegistryProviders.Delete(ctx, orgTest.Name, prvCtx.RegistryName, badIdentifier, "name")
-				assert.EqualError(t, err, "invalid value for namespace")
-			})
-
-			t.Run("without a registry-name", func(t *testing.T) {
-				err := client.RegistryProviders.Delete(ctx, orgTest.Name, "", "namespace", "name")
-				assert.EqualError(t, err, "registry-name is required")
-			})
-
-			t.Run("without a valid organization", func(t *testing.T) {
-				err := client.RegistryProviders.Delete(ctx, badIdentifier, prvCtx.RegistryName, "namespace", "name")
-				assert.EqualError(t, err, ErrInvalidOrg.Error())
-			})
 		})
 	}
+}
+
+func TestRegistryProvidersIDValidation(t *testing.T) {
+	orgName := "orgName"
+	registryName := PublicRegistry
+
+	t.Run("valid", func(t *testing.T) {
+		id := RegistryProviderID{
+			OrganizationName: orgName,
+			RegistryName:     registryName,
+			Namespace:        "namespace",
+			Name:             "name",
+		}
+		assert.NoError(t, id.valid())
+	})
+
+	t.Run("without a name", func(t *testing.T) {
+		id := RegistryProviderID{
+			OrganizationName: orgName,
+			RegistryName:     registryName,
+			Namespace:        "namespace",
+			Name:             "",
+		}
+		assert.EqualError(t, id.valid(), ErrRequiredName.Error())
+	})
+
+	t.Run("with an invalid name", func(t *testing.T) {
+		id := RegistryProviderID{
+			OrganizationName: orgName,
+			RegistryName:     registryName,
+			Namespace:        "namespace",
+			Name:             badIdentifier,
+		}
+		assert.EqualError(t, id.valid(), ErrInvalidName.Error())
+	})
+
+	t.Run("without a namespace", func(t *testing.T) {
+		id := RegistryProviderID{
+			OrganizationName: orgName,
+			RegistryName:     registryName,
+			Namespace:        "",
+			Name:             "name",
+		}
+		assert.EqualError(t, id.valid(), "namespace is required")
+	})
+
+	t.Run("with an invalid namespace", func(t *testing.T) {
+		id := RegistryProviderID{
+			OrganizationName: orgName,
+			RegistryName:     registryName,
+			Namespace:        badIdentifier,
+			Name:             "name",
+		}
+		assert.EqualError(t, id.valid(), "invalid value for namespace")
+	})
+
+	t.Run("without a registry-name", func(t *testing.T) {
+		id := RegistryProviderID{
+			OrganizationName: orgName,
+			RegistryName:     "",
+			Namespace:        "namespace",
+			Name:             "name",
+		}
+		assert.EqualError(t, id.valid(), "registry-name is required")
+	})
+
+	t.Run("without a valid organization", func(t *testing.T) {
+		id := RegistryProviderID{
+			OrganizationName: badIdentifier,
+			RegistryName:     registryName,
+			Namespace:        "namespace",
+			Name:             "name",
+		}
+		assert.EqualError(t, id.valid(), ErrInvalidOrg.Error())
+	})
 }

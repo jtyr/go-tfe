@@ -22,10 +22,10 @@ type RegistryProviders interface {
 	Create(ctx context.Context, organization string, options RegistryProviderCreateOptions) (*RegistryProvider, error)
 
 	// Read a registry provider
-	Read(ctx context.Context, organization string, registryName RegistryName, namespace string, name string, options *RegistryProviderReadOptions) (*RegistryProvider, error)
+	Read(ctx context.Context, providerId RegistryProviderID, options *RegistryProviderReadOptions) (*RegistryProvider, error)
 
 	// Delete a registry provider
-	Delete(ctx context.Context, organization string, registryName RegistryName, namespace string, name string) error
+	Delete(ctx context.Context, providerId RegistryProviderID) error
 }
 
 // registryProviders implements RegistryProviders.
@@ -168,35 +168,50 @@ func (r *registryProviders) Create(ctx context.Context, organization string, opt
 	return prv, nil
 }
 
+// RegistryProviderID is the multi key ID for addressing a provider
+type RegistryProviderID struct {
+	OrganizationName string       `jsonapi:"attr,organization-name"`
+	Namespace        string       `jsonapi:"attr,namespace"`
+	Name             string       `jsonapi:"attr,name"`
+	RegistryName     RegistryName `jsonapi:"attr,registry-name"`
+}
+
+func (id RegistryProviderID) valid() error {
+	if !validStringID(&id.OrganizationName) {
+		return ErrInvalidOrg
+	}
+	if !validString(&id.Name) {
+		return ErrRequiredName
+	}
+	if !validStringID(&id.Name) {
+		return ErrInvalidName
+	}
+	if !validString(&id.Namespace) {
+		return errors.New("namespace is required")
+	}
+	if !validStringID(&id.Namespace) {
+		return errors.New("invalid value for namespace")
+	}
+	if !validString((*string)(&id.RegistryName)) {
+		return errors.New("registry-name is required")
+	}
+	return nil
+}
+
 type RegistryProviderReadOptions struct {
 }
 
-func (r *registryProviders) Read(ctx context.Context, organization string, registryName RegistryName, namespace string, name string, options *RegistryProviderReadOptions) (*RegistryProvider, error) {
-	if !validStringID(&organization) {
-		return nil, ErrInvalidOrg
-	}
-	if !validString(&name) {
-		return nil, ErrRequiredName
-	}
-	if !validStringID(&name) {
-		return nil, ErrInvalidName
-	}
-	if !validString(&namespace) {
-		return nil, errors.New("namespace is required")
-	}
-	if !validStringID(&namespace) {
-		return nil, errors.New("invalid value for namespace")
-	}
-	if !validString((*string)(&registryName)) {
-		return nil, errors.New("registry-name is required")
+func (r *registryProviders) Read(ctx context.Context, providerId RegistryProviderID, options *RegistryProviderReadOptions) (*RegistryProvider, error) {
+	if err := providerId.valid(); err != nil {
+		return nil, err
 	}
 
 	u := fmt.Sprintf(
 		"organizations/%s/registry-providers/%s/%s/%s",
-		url.QueryEscape(organization),
-		url.QueryEscape(string(registryName)),
-		url.QueryEscape(namespace),
-		url.QueryEscape(name),
+		url.QueryEscape(providerId.OrganizationName),
+		url.QueryEscape(string(providerId.RegistryName)),
+		url.QueryEscape(providerId.Namespace),
+		url.QueryEscape(providerId.Name),
 	)
 	req, err := r.client.newRequest("GET", u, options)
 	if err != nil {
@@ -212,32 +227,17 @@ func (r *registryProviders) Read(ctx context.Context, organization string, regis
 	return prv, nil
 }
 
-func (r *registryProviders) Delete(ctx context.Context, organization string, registryName RegistryName, namespace string, name string) error {
-	if !validStringID(&organization) {
-		return ErrInvalidOrg
-	}
-	if !validString(&name) {
-		return ErrRequiredName
-	}
-	if !validStringID(&name) {
-		return ErrInvalidName
-	}
-	if !validString(&namespace) {
-		return errors.New("namespace is required")
-	}
-	if !validStringID(&namespace) {
-		return errors.New("invalid value for namespace")
-	}
-	if !validString((*string)(&registryName)) {
-		return errors.New("registry-name is required")
+func (r *registryProviders) Delete(ctx context.Context, providerId RegistryProviderID) error {
+	if err := providerId.valid(); err != nil {
+		return err
 	}
 
 	u := fmt.Sprintf(
 		"organizations/%s/registry-providers/%s/%s/%s",
-		url.QueryEscape(organization),
-		url.QueryEscape(string(registryName)),
-		url.QueryEscape(namespace),
-		url.QueryEscape(name),
+		url.QueryEscape(providerId.OrganizationName),
+		url.QueryEscape(string(providerId.RegistryName)),
+		url.QueryEscape(providerId.Namespace),
+		url.QueryEscape(providerId.Name),
 	)
 	req, err := r.client.newRequest("DELETE", u, nil)
 	if err != nil {
