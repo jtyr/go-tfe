@@ -87,9 +87,8 @@ func TestRegistryProvidersList(t *testing.T) {
 		})
 
 		t.Run("filters on registry name", func(t *testing.T) {
-			publicName := PublicRegistry
 			returnedProviders, err := client.RegistryProviders.List(ctx, orgTest.Name, &RegistryProviderListOptions{
-				RegistryName: &publicName,
+				RegistryName: PublicRegistry,
 				ListOptions: ListOptions{
 					PageNumber: 0,
 					PageSize:   providerN,
@@ -107,7 +106,7 @@ func TestRegistryProvidersList(t *testing.T) {
 						break
 					}
 				}
-				assert.Equal(t, publicName, rp.RegistryName)
+				assert.Equal(t, PublicRegistry, rp.RegistryName)
 				assert.True(t, foundProvider, "Expected to find provider %s but did not:\nexpected:\n%v\nreturned\n%v", rp.ID, providers, returnedProviders)
 			}
 		})
@@ -115,7 +114,7 @@ func TestRegistryProvidersList(t *testing.T) {
 		t.Run("searches", func(t *testing.T) {
 			expectedProvider := providers[0]
 			returnedProviders, err := client.RegistryProviders.List(ctx, orgTest.Name, &RegistryProviderListOptions{
-				Search: &expectedProvider.Name,
+				Search: expectedProvider.Name,
 				ListOptions: ListOptions{
 					PageNumber: 0,
 					PageSize:   providerN,
@@ -150,33 +149,30 @@ func TestRegistryProvidersCreate(t *testing.T) {
 	orgTest, orgTestCleanup := createOrganization(t, client)
 	defer orgTestCleanup()
 
-	publicName := PublicRegistry
-	privateName := PrivateRegistry
-
 	t.Run("with valid options", func(t *testing.T) {
 
 		publicProviderOptions := RegistryProviderCreateOptions{
-			Name:         String("provider_name"),
-			Namespace:    String("public_namespace"),
-			RegistryName: &publicName,
+			Name:         "provider_name",
+			Namespace:    "public_namespace",
+			RegistryName: PublicRegistry,
 		}
 		privateProviderOptions := RegistryProviderCreateOptions{
-			Name:         String("provider_name"),
-			Namespace:    &orgTest.Name,
-			RegistryName: &privateName,
+			Name:         "provider_name",
+			Namespace:    orgTest.Name,
+			RegistryName: PrivateRegistry,
 		}
 
 		registryOptions := []RegistryProviderCreateOptions{publicProviderOptions, privateProviderOptions}
 
 		for _, options := range registryOptions {
-			testName := fmt.Sprintf("with %s provider", *options.RegistryName)
+			testName := fmt.Sprintf("with %s provider", options.RegistryName)
 			t.Run(testName, func(t *testing.T) {
 				prv, err := client.RegistryProviders.Create(ctx, orgTest.Name, options)
 				require.NoError(t, err)
 				assert.NotEmpty(t, prv.ID)
-				assert.Equal(t, *options.Name, prv.Name)
-				assert.Equal(t, *options.Namespace, prv.Namespace)
-				assert.Equal(t, *options.RegistryName, prv.RegistryName)
+				assert.Equal(t, options.Name, prv.Name)
+				assert.Equal(t, options.Namespace, prv.Namespace)
+				assert.Equal(t, options.RegistryName, prv.RegistryName)
 
 				t.Run("permissions are properly decoded", func(t *testing.T) {
 					assert.True(t, prv.Permissions.CanDelete)
@@ -197,8 +193,8 @@ func TestRegistryProvidersCreate(t *testing.T) {
 	t.Run("with invalid options", func(t *testing.T) {
 		t.Run("without a name", func(t *testing.T) {
 			options := RegistryProviderCreateOptions{
-				Namespace:    String("namespace"),
-				RegistryName: &publicName,
+				Namespace:    "namespace",
+				RegistryName: PublicRegistry,
 			}
 			rm, err := client.RegistryProviders.Create(ctx, orgTest.Name, options)
 			assert.Nil(t, rm)
@@ -207,9 +203,9 @@ func TestRegistryProvidersCreate(t *testing.T) {
 
 		t.Run("with an invalid name", func(t *testing.T) {
 			options := RegistryProviderCreateOptions{
-				Name:         String("invalid name"),
-				Namespace:    String("namespace"),
-				RegistryName: &publicName,
+				Name:         "invalid name",
+				Namespace:    "namespace",
+				RegistryName: PublicRegistry,
 			}
 			rm, err := client.RegistryProviders.Create(ctx, orgTest.Name, options)
 			assert.Nil(t, rm)
@@ -218,8 +214,8 @@ func TestRegistryProvidersCreate(t *testing.T) {
 
 		t.Run("without a namespace", func(t *testing.T) {
 			options := RegistryProviderCreateOptions{
-				Name:         String("name"),
-				RegistryName: &publicName,
+				Name:         "name",
+				RegistryName: PublicRegistry,
 			}
 			rm, err := client.RegistryProviders.Create(ctx, orgTest.Name, options)
 			assert.Nil(t, rm)
@@ -228,9 +224,9 @@ func TestRegistryProvidersCreate(t *testing.T) {
 
 		t.Run("with an invalid namespace", func(t *testing.T) {
 			options := RegistryProviderCreateOptions{
-				Name:         String("name"),
-				Namespace:    String("invalid namespace"),
-				RegistryName: &publicName,
+				Name:         "name",
+				Namespace:    "invalid namespace",
+				RegistryName: PublicRegistry,
 			}
 			rm, err := client.RegistryProviders.Create(ctx, orgTest.Name, options)
 			assert.Nil(t, rm)
@@ -239,8 +235,8 @@ func TestRegistryProvidersCreate(t *testing.T) {
 
 		t.Run("without a registry-name", func(t *testing.T) {
 			options := RegistryProviderCreateOptions{
-				Name:      String("name"),
-				Namespace: String("namespace"),
+				Name:      "name",
+				Namespace: "namespace",
 			}
 			rm, err := client.RegistryProviders.Create(ctx, orgTest.Name, options)
 			assert.Nil(t, rm)
@@ -250,9 +246,9 @@ func TestRegistryProvidersCreate(t *testing.T) {
 
 	t.Run("without a valid organization", func(t *testing.T) {
 		options := RegistryProviderCreateOptions{
-			Name:         String("name"),
-			Namespace:    String("namespace"),
-			RegistryName: &publicName,
+			Name:         "name",
+			Namespace:    "namespace",
+			RegistryName: PublicRegistry,
 		}
 		rm, err := client.RegistryProviders.Create(ctx, badIdentifier, options)
 		assert.Nil(t, rm)
@@ -261,9 +257,9 @@ func TestRegistryProvidersCreate(t *testing.T) {
 
 	t.Run("without a matching namespace organization.name for private registry", func(t *testing.T) {
 		options := RegistryProviderCreateOptions{
-			Name:         String("name"),
-			Namespace:    String("namespace"),
-			RegistryName: &privateName,
+			Name:         "name",
+			Namespace:    "namespace",
+			RegistryName: PrivateRegistry,
 		}
 		rm, err := client.RegistryProviders.Create(ctx, orgTest.Name, options)
 		assert.Nil(t, rm)

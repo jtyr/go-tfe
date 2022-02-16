@@ -53,8 +53,8 @@ type RegistryProvider struct {
 	UpdatedAt    string                       `jsonapi:"attr,updated-at"`
 
 	// Relations
-	Organization             *Organization             `jsonapi:"relation,organization"`
-	RegistryProviderVersions []RegistryProviderVersion `jsonapi:"relation,registry-provider-version"`
+	Organization             *Organization              `jsonapi:"relation,organization"`
+	RegistryProviderVersions []*RegistryProviderVersion `jsonapi:"relation,registry-provider-version"`
 }
 
 type RegistryProviderPermissions struct {
@@ -64,11 +64,11 @@ type RegistryProviderPermissions struct {
 type RegistryProviderListOptions struct {
 	ListOptions
 	// A query string to filter by registry_name
-	RegistryName *RegistryName `url:"filter[registry_name],omitempty"`
+	RegistryName RegistryName `url:"filter[registry_name],omitempty"`
 	// A query string to filter by organization
-	OrganizationName *string `url:"filter[organization_name],omitempty"`
+	OrganizationName string `url:"filter[organization_name],omitempty"`
 	// A query string to do a fuzzy search
-	Search *string `url:"q,omitempty"`
+	Search string `url:"q,omitempty"`
 }
 
 type RegistryProviderList struct {
@@ -114,25 +114,25 @@ type RegistryProviderCreateOptions struct {
 	// https://jsonapi.org/format/#crud-creating
 	Type string `jsonapi:"primary,registry-providers"`
 
-	Namespace    *string       `jsonapi:"attr,namespace"`
-	Name         *string       `jsonapi:"attr,name"`
-	RegistryName *RegistryName `jsonapi:"attr,registry-name"`
+	Namespace    string       `jsonapi:"attr,namespace"`
+	Name         string       `jsonapi:"attr,name"`
+	RegistryName RegistryName `jsonapi:"attr,registry-name"`
 }
 
 func (o RegistryProviderCreateOptions) valid() error {
-	if !validString(o.Name) {
+	if !validString(&o.Name) {
 		return ErrRequiredName
 	}
-	if !validStringID(o.Name) {
+	if !validStringID(&o.Name) {
 		return ErrInvalidName
 	}
-	if !validString(o.Namespace) {
+	if !validString(&o.Namespace) {
 		return errors.New("namespace is required")
 	}
-	if !validStringID(o.Namespace) {
+	if !validStringID(&o.Namespace) {
 		return errors.New("invalid value for namespace")
 	}
-	if !validString((*string)(o.RegistryName)) {
+	if !validString((*string)(&o.RegistryName)) {
 		return errors.New("registry-name is required")
 	}
 	return nil
@@ -147,7 +147,7 @@ func (r *registryProviders) Create(ctx context.Context, organization string, opt
 	}
 	// Private providers must match their namespace and organization name
 	// This is enforced by the API as well
-	if *options.RegistryName == PrivateRegistry && organization != *options.Namespace {
+	if options.RegistryName == PrivateRegistry && organization != options.Namespace {
 		return nil, errors.New("namespace must match organization name for private providers")
 	}
 

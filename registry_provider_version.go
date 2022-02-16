@@ -43,8 +43,8 @@ type RegistryProviderVersion struct {
 	UpdatedAt string   `jsonapi:"attr,updated-at"`
 
 	// Relations
-	RegistryProvider          *RegistryProvider          `jsonapi:"relation,registry-provider"`
-	RegistryProviderPlatforms []RegistryProviderPlatform `jsonapi:"relation,registry-provider-platform"`
+	RegistryProvider          *RegistryProvider           `jsonapi:"relation,registry-provider"`
+	RegistryProviderPlatforms []*RegistryProviderPlatform `jsonapi:"relation,registry-provider-platform"`
 
 	// Links
 	Links map[string]interface{} `jsonapi:"links,omitempty"`
