@@ -2,7 +2,6 @@ package tfe
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/url"
 )
@@ -41,6 +40,14 @@ const (
 	PrivateRegistry RegistryName = "private"
 	PublicRegistry  RegistryName = "public"
 )
+
+func (rn RegistryName) valid() error {
+	switch rn {
+	case PrivateRegistry, PublicRegistry:
+		return nil
+	}
+	return ErrInvalidRegistryName
+}
 
 // RegistryProvider represents a registry provider
 type RegistryProvider struct {
@@ -120,20 +127,14 @@ type RegistryProviderCreateOptions struct {
 }
 
 func (o RegistryProviderCreateOptions) valid() error {
-	if !validString(&o.Name) {
-		return ErrRequiredName
-	}
 	if !validStringID(&o.Name) {
 		return ErrInvalidName
 	}
-	if !validString(&o.Namespace) {
-		return errors.New("namespace is required")
-	}
 	if !validStringID(&o.Namespace) {
-		return errors.New("invalid value for namespace")
+		return ErrInvalidNamespace
 	}
-	if !validString((*string)(&o.RegistryName)) {
-		return errors.New("registry-name is required")
+	if err := o.RegistryName.valid(); err != nil {
+		return err
 	}
 	return nil
 }
@@ -148,7 +149,7 @@ func (r *registryProviders) Create(ctx context.Context, organization string, opt
 	// Private providers must match their namespace and organization name
 	// This is enforced by the API as well
 	if options.RegistryName == PrivateRegistry && organization != options.Namespace {
-		return nil, errors.New("namespace must match organization name for private providers")
+		return nil, ErrInvalidPrivateProviderNamespaceDoesntMatchOrganization
 	}
 
 	u := fmt.Sprintf(
@@ -180,20 +181,14 @@ func (id RegistryProviderID) valid() error {
 	if !validStringID(&id.OrganizationName) {
 		return ErrInvalidOrg
 	}
-	if !validString(&id.Name) {
-		return ErrRequiredName
-	}
 	if !validStringID(&id.Name) {
 		return ErrInvalidName
 	}
-	if !validString(&id.Namespace) {
-		return errors.New("namespace is required")
-	}
 	if !validStringID(&id.Namespace) {
-		return errors.New("invalid value for namespace")
+		return ErrInvalidNamespace
 	}
-	if !validString((*string)(&id.RegistryName)) {
-		return errors.New("registry-name is required")
+	if err := id.RegistryName.valid(); err != nil {
+		return err
 	}
 	return nil
 }

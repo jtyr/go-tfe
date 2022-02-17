@@ -58,10 +58,10 @@ type RegistryProviderVersionID struct {
 
 func (id RegistryProviderVersionID) valid() error {
 	if !validStringID(&id.Version) {
-		return errors.New("version is required")
+		return ErrInvalidVersion
 	}
 	if id.RegistryName != PrivateRegistry {
-		return errors.New("only private registry is allowed")
+		return ErrRequiredPrivateRegistry
 	}
 	if err := id.RegistryProviderID.valid(); err != nil {
 		return err
@@ -120,10 +120,10 @@ type RegistryProviderVersionCreateOptions struct {
 
 func (o RegistryProviderVersionCreateOptions) valid() error {
 	if !validStringID(&o.Version) {
-		return errors.New("version is required")
+		return ErrInvalidVersion
 	}
 	if !validStringID(&o.KeyID) {
-		return errors.New("key-id is required")
+		return ErrInvalidKeyID
 	}
 	return nil
 }

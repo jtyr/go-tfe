@@ -42,7 +42,7 @@ func TestRegistryProviderVersionsIDValidation(t *testing.T) {
 			Version:            "",
 			RegistryProviderID: validRegistryProviderId,
 		}
-		assert.EqualError(t, id.valid(), "version is required")
+		assert.EqualError(t, id.valid(), ErrInvalidVersion.Error())
 	})
 
 	t.Run("without a key-id", func(t *testing.T) {
@@ -50,7 +50,7 @@ func TestRegistryProviderVersionsIDValidation(t *testing.T) {
 			Version:            "",
 			RegistryProviderID: validRegistryProviderId,
 		}
-		assert.EqualError(t, id.valid(), "version is required")
+		assert.EqualError(t, id.valid(), ErrInvalidVersion.Error())
 	})
 
 	t.Run("invalid version", func(t *testing.T) {
@@ -59,7 +59,7 @@ func TestRegistryProviderVersionsIDValidation(t *testing.T) {
 			Version:            "foo",
 			RegistryProviderID: validRegistryProviderId,
 		}
-		assert.EqualError(t, id.valid(), "version is required")
+		assert.EqualError(t, id.valid(), ErrInvalidVersion.Error())
 	})
 
 	t.Run("invalid registry for parent provider", func(t *testing.T) {
@@ -67,7 +67,7 @@ func TestRegistryProviderVersionsIDValidation(t *testing.T) {
 			Version:            version,
 			RegistryProviderID: publicRegistryProviderId,
 		}
-		assert.EqualError(t, id.valid(), "only private registry is allowed")
+		assert.EqualError(t, id.valid(), ErrRequiredPrivateRegistry.Error())
 	})
 
 	t.Run("without a valid registry provider id", func(t *testing.T) {
@@ -135,7 +135,7 @@ func TestRegistryProviderVersionsCreate(t *testing.T) {
 			}
 			rm, err := client.RegistryProviderVersions.Create(ctx, providerId, options)
 			assert.Nil(t, rm)
-			assert.EqualError(t, err, "version is required")
+			assert.EqualError(t, err, ErrInvalidVersion.Error())
 		})
 
 		t.Run("without a key-id", func(t *testing.T) {
@@ -145,7 +145,7 @@ func TestRegistryProviderVersionsCreate(t *testing.T) {
 			}
 			rm, err := client.RegistryProviderVersions.Create(ctx, providerId, options)
 			assert.Nil(t, rm)
-			assert.EqualError(t, err, "key-id is required")
+			assert.EqualError(t, err, ErrInvalidKeyID.Error())
 		})
 
 		t.Run("with a public provider", func(t *testing.T) {
@@ -161,7 +161,7 @@ func TestRegistryProviderVersionsCreate(t *testing.T) {
 			}
 			rm, err := client.RegistryProviderVersions.Create(ctx, providerId, options)
 			assert.Nil(t, rm)
-			assert.EqualError(t, err, "only private registry is allowed")
+			assert.EqualError(t, err, ErrRequiredPrivateRegistry.Error())
 		})
 
 		t.Run("without a valid provider id", func(t *testing.T) {
