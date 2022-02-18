@@ -1,3 +1,6 @@
+//go:build integration
+// +build integration
+
 package tfe
 
 import (
@@ -179,8 +182,5 @@ func TestRegistryProviderVersionsCreate(t *testing.T) {
 			assert.Nil(t, rm)
 			assert.EqualError(t, err, ErrInvalidOrg.Error())
 		})
-	})
-
-	t.Run("without a valid provider id", func(t *testing.T) {
 	})
 }

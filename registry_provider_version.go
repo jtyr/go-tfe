@@ -2,7 +2,6 @@ package tfe
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/url"
 )
@@ -134,7 +133,7 @@ func (r *registryProviderVersions) Create(ctx context.Context, providerId Regist
 		return nil, err
 	}
 	if providerId.RegistryName != PrivateRegistry {
-		return nil, errors.New("only private registry is allowed")
+		return nil, ErrPrivateRegistryRequired
 	}
 	if err := options.valid(); err != nil {
 		return nil, err
