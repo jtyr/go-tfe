@@ -143,6 +143,41 @@ func TestRegistryProvidersList(t *testing.T) {
 		assert.Equal(t, 0, providers.TotalCount)
 		assert.Equal(t, 0, providers.TotalPages)
 	})
+
+	t.Run("with include provider versions", func(t *testing.T) {
+		version1, version1Cleanup := createRegistryProviderVersion(t, client, nil)
+		defer version1Cleanup()
+
+		provider := version1.RegistryProvider
+
+		version2, version2Cleanup := createRegistryProviderVersion(t, client, provider)
+		defer version2Cleanup()
+
+		versions := []*RegistryProviderVersion{version1, version2}
+
+		options := RegistryProviderListOptions{
+			Include: &[]RegistryProviderIncludeOps{
+				RegistryProviderVersionsInclude,
+			},
+		}
+
+		providersRead, err := client.RegistryProviders.List(ctx, provider.Organization.Name, &options)
+		assert.NoError(t, err)
+		providerRead := providersRead.Items[0]
+		assert.Equal(t, providerRead.ID, provider.ID)
+		assert.Equal(t, len(versions), len(providerRead.RegistryProviderVersions))
+		foundVersion := &RegistryProviderVersion{}
+		for _, v := range providerRead.RegistryProviderVersions {
+			for i := 0; i < len(versions); i++ {
+				if v.ID == versions[i].ID {
+					foundVersion = versions[i]
+					break
+				}
+			}
+			assert.True(t, foundVersion.ID != "", "Expected to find versions: %v but did not", versions)
+			assert.Equal(t, v.Version, foundVersion.Version)
+		}
+	})
 }
 
 func TestRegistryProvidersCreate(t *testing.T) {
@@ -354,6 +389,47 @@ func TestRegistryProvidersRead(t *testing.T) {
 			})
 		})
 	}
+
+	t.Run("populates version relationships", func(t *testing.T) {
+		version1, version1Cleanup := createRegistryProviderVersion(t, client, nil)
+		defer version1Cleanup()
+
+		provider := version1.RegistryProvider
+
+		version2, version2Cleanup := createRegistryProviderVersion(t, client, provider)
+		defer version2Cleanup()
+
+		versions := []*RegistryProviderVersion{version1, version2}
+
+		id := RegistryProviderID{
+			OrganizationName: provider.Organization.Name,
+			RegistryName:     provider.RegistryName,
+			Namespace:        provider.Namespace,
+			Name:             provider.Name,
+		}
+
+		options := RegistryProviderReadOptions{
+			Include: &[]RegistryProviderIncludeOps{
+				RegistryProviderVersionsInclude,
+			},
+		}
+
+		providerRead, err := client.RegistryProviders.Read(ctx, id, &options)
+		assert.NoError(t, err)
+		assert.Equal(t, providerRead.ID, provider.ID)
+		assert.Equal(t, len(versions), len(providerRead.RegistryProviderVersions))
+		foundVersion := &RegistryProviderVersion{}
+		for _, v := range providerRead.RegistryProviderVersions {
+			for i := 0; i < len(versions); i++ {
+				if v.ID == versions[i].ID {
+					foundVersion = versions[i]
+					break
+				}
+			}
+			assert.True(t, foundVersion.ID != "", "Expected to find versions: %v but did not", versions)
+			assert.Equal(t, v.Version, foundVersion.Version)
+		}
+	})
 }
 
 func TestRegistryProvidersDelete(t *testing.T) {

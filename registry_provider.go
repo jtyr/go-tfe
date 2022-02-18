@@ -49,6 +49,14 @@ func (rn RegistryName) valid() error {
 	return ErrInvalidRegistryName
 }
 
+// RegistryProviderIncludeOps represents which jsonapi include can be used with registry providers
+type RegistryProviderIncludeOps string
+
+// List of available includes
+const (
+	RegistryProviderVersionsInclude RegistryProviderIncludeOps = "registry-provider-versions"
+)
+
 // RegistryProvider represents a registry provider
 type RegistryProvider struct {
 	ID           string                       `jsonapi:"primary,registry-providers"`
@@ -61,7 +69,7 @@ type RegistryProvider struct {
 
 	// Relations
 	Organization             *Organization              `jsonapi:"relation,organization"`
-	RegistryProviderVersions []*RegistryProviderVersion `jsonapi:"relation,registry-provider-version"`
+	RegistryProviderVersions []*RegistryProviderVersion `jsonapi:"relation,registry-provider-versions"`
 }
 
 type RegistryProviderPermissions struct {
@@ -76,6 +84,9 @@ type RegistryProviderListOptions struct {
 	OrganizationName string `url:"filter[organization_name],omitempty"`
 	// A query string to do a fuzzy search
 	Search string `url:"q,omitempty"`
+
+	// Include related jsonapi relationships
+	Include *[]RegistryProviderIncludeOps `url:"include,omitempty"`
 }
 
 type RegistryProviderList struct {
@@ -194,6 +205,8 @@ func (id RegistryProviderID) valid() error {
 }
 
 type RegistryProviderReadOptions struct {
+	// Include related jsonapi relationships
+	Include *[]RegistryProviderIncludeOps `url:"include,omitempty"`
 }
 
 func (r *registryProviders) Read(ctx context.Context, providerId RegistryProviderID, options *RegistryProviderReadOptions) (*RegistryProvider, error) {
