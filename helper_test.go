@@ -862,7 +862,7 @@ func createRegistryProviderVersion(t *testing.T, client *Client, provider *Regis
 			RegistryProviderID: providerId,
 		}
 		if err := client.RegistryProviderVersions.Delete(ctx, id); err != nil {
-			t.Errorf("Error destroying registry provider! WARNING: Dangling resources\n"+
+			t.Errorf("Error destroying registry provider version! WARNING: Dangling resources\n"+
 				"may exist! The full error is shown below.\n\n"+
 				"Registry Provider Version: %s/%s/%s\nError: %s", prvv.RegistryProvider.Namespace, prvv.RegistryProvider.Name, prvv.Version, err)
 		}

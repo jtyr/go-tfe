@@ -21,7 +21,7 @@ type RegistryProviderVersions interface {
 	Create(ctx context.Context, providerId RegistryProviderID, options RegistryProviderVersionCreateOptions) (*RegistryProviderVersion, error)
 
 	// Read a registry provider
-	Read(ctx context.Context, versionId RegistryProviderVersionID, options *RegistryProviderVersionReadOptions) (*RegistryProvider, error)
+	Read(ctx context.Context, versionId RegistryProviderVersionID, options *RegistryProviderVersionReadOptions) (*RegistryProviderVersion, error)
 
 	// Delete a registry provider
 	Delete(ctx context.Context, versionId RegistryProviderVersionID) error
@@ -43,7 +43,7 @@ type RegistryProviderVersion struct {
 
 	// Relations
 	RegistryProvider          *RegistryProvider           `jsonapi:"relation,registry-provider"`
-	RegistryProviderPlatforms []*RegistryProviderPlatform `jsonapi:"relation,registry-provider-platform"`
+	RegistryProviderPlatforms []*RegistryProviderPlatform `jsonapi:"relation,registry-provider-platforms"`
 
 	// Links
 	Links map[string]interface{} `jsonapi:"links,omitempty"`
@@ -70,7 +70,7 @@ func (id RegistryProviderVersionID) valid() error {
 
 type RegistryProviderVersionList struct {
 	*Pagination
-	Items []*RegistryProvider
+	Items []*RegistryProviderVersion
 }
 
 type RegistryProviderVersionListOptions struct {
@@ -162,11 +162,51 @@ func (r *registryProviderVersions) Create(ctx context.Context, providerId Regist
 type RegistryProviderVersionReadOptions struct{}
 
 // Read a registry provider
-func (r *registryProviderVersions) Read(ctx context.Context, versionId RegistryProviderVersionID, options *RegistryProviderVersionReadOptions) (*RegistryProvider, error) {
-	return nil, nil
+func (r *registryProviderVersions) Read(ctx context.Context, versionId RegistryProviderVersionID, options *RegistryProviderVersionReadOptions) (*RegistryProviderVersion, error) {
+	if err := versionId.valid(); err != nil {
+		return nil, err
+	}
+
+	u := fmt.Sprintf(
+		"organizations/%s/registry-providers/%s/%s/%s/versions/%s",
+		url.QueryEscape(versionId.OrganizationName),
+		url.QueryEscape(string(versionId.RegistryName)),
+		url.QueryEscape(versionId.Namespace),
+		url.QueryEscape(versionId.Name),
+		url.QueryEscape(versionId.Version),
+	)
+	req, err := r.client.newRequest("GET", u, options)
+	if err != nil {
+		return nil, err
+	}
+
+	prvv := &RegistryProviderVersion{}
+	err = r.client.do(ctx, req, prvv)
+	if err != nil {
+		return nil, err
+	}
+
+	return prvv, nil
 }
 
 // Delete a registry provider
 func (r *registryProviderVersions) Delete(ctx context.Context, versionId RegistryProviderVersionID) error {
-	return nil
+	if err := versionId.valid(); err != nil {
+		return err
+	}
+
+	u := fmt.Sprintf(
+		"organizations/%s/registry-providers/%s/%s/%s/versions/%s",
+		url.QueryEscape(versionId.OrganizationName),
+		url.QueryEscape(string(versionId.RegistryName)),
+		url.QueryEscape(versionId.Namespace),
+		url.QueryEscape(versionId.Name),
+		url.QueryEscape(versionId.Version),
+	)
+	req, err := r.client.newRequest("DELETE", u, nil)
+	if err != nil {
+		return err
+	}
+
+	return r.client.do(ctx, req, nil)
 }

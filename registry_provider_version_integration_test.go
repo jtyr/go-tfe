@@ -5,6 +5,7 @@ package tfe
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -183,4 +184,189 @@ func TestRegistryProviderVersionsCreate(t *testing.T) {
 			assert.EqualError(t, err, ErrInvalidOrg.Error())
 		})
 	})
+}
+
+func TestRegistryProviderVersionsList(t *testing.T) {
+	client := testClient(t)
+	ctx := context.Background()
+
+	t.Run("with versions", func(t *testing.T) {
+		provider, providerCleanup := createPrivateRegistryProvider(t, client, nil)
+		defer providerCleanup()
+
+		createN := 10
+		versions := make([]*RegistryProviderVersion, 0)
+		// these providers will be destroyed when the org is cleaned up
+		for i := 0; i < createN; i++ {
+			version, _ := createRegistryProviderVersion(t, client, provider)
+			versions = append(versions, version)
+		}
+		versionN := len(versions)
+
+		id := RegistryProviderID{
+			OrganizationName: provider.Organization.Name,
+			Namespace:        provider.Namespace,
+			Name:             provider.Name,
+			RegistryName:     provider.RegistryName,
+		}
+
+		t.Run("returns all versions", func(t *testing.T) {
+			returnedVersions, err := client.RegistryProviderVersions.List(ctx, id, &RegistryProviderVersionListOptions{
+				ListOptions: ListOptions{
+					PageNumber: 0,
+					PageSize:   versionN,
+				},
+			})
+			require.NoError(t, err)
+			assert.NotEmpty(t, returnedVersions.Items)
+			assert.Equal(t, versionN, returnedVersions.TotalCount)
+			assert.Equal(t, 1, returnedVersions.TotalPages)
+			for _, rv := range returnedVersions.Items {
+				foundVersion := false
+				for _, v := range versions {
+					if rv.ID == v.ID {
+						foundVersion = true
+						break
+					}
+				}
+				assert.True(t, foundVersion, "Expected to find version %s but did not:\nexpected:\n%v\nreturned\n%v", rv.ID, versions, returnedVersions)
+			}
+		})
+
+		t.Run("returns pages", func(t *testing.T) {
+			pageN := 2
+			pageSize := versionN / pageN
+
+			for page := 0; page < pageN; page++ {
+				testName := fmt.Sprintf("returns page %d of versions", page)
+				t.Run(testName, func(t *testing.T) {
+					returnedVersions, err := client.RegistryProviderVersions.List(ctx, id, &RegistryProviderVersionListOptions{
+						ListOptions: ListOptions{
+							PageNumber: page,
+							PageSize:   pageSize,
+						},
+					})
+					require.NoError(t, err)
+					assert.NotEmpty(t, returnedVersions.Items)
+					assert.Equal(t, versionN, returnedVersions.TotalCount)
+					assert.Equal(t, pageN, returnedVersions.TotalPages)
+					assert.Equal(t, pageSize, len(returnedVersions.Items))
+					for _, rv := range returnedVersions.Items {
+						foundVersion := false
+						for _, v := range versions {
+							if rv.ID == v.ID {
+								foundVersion = true
+								break
+							}
+						}
+						assert.True(t, foundVersion, "Expected to find version %s but did not:\nexpected:\n%v\nreturned\n%v", rv.ID, versions, returnedVersions)
+					}
+				})
+			}
+		})
+	})
+
+	t.Run("without versions", func(t *testing.T) {
+		provider, providerCleanup := createPrivateRegistryProvider(t, client, nil)
+		defer providerCleanup()
+
+		id := RegistryProviderID{
+			OrganizationName: provider.Organization.Name,
+			Namespace:        provider.Namespace,
+			Name:             provider.Name,
+			RegistryName:     provider.RegistryName,
+		}
+
+		versions, err := client.RegistryProviderVersions.List(ctx, id, nil)
+		require.NoError(t, err)
+		assert.Empty(t, versions.Items)
+		assert.Equal(t, 0, versions.TotalCount)
+		assert.Equal(t, 0, versions.TotalPages)
+	})
+
+	t.Run("with include provider platforms", func(t *testing.T) {
+	})
+}
+
+func TestRegistryProviderVersionsDelete(t *testing.T) {
+	client := testClient(t)
+	ctx := context.Background()
+
+	provider, providerCleanup := createPrivateRegistryProvider(t, client, nil)
+	defer providerCleanup()
+
+	t.Run("with valid version", func(t *testing.T) {
+		version, _ := createRegistryProviderVersion(t, client, provider)
+
+		versionId := RegistryProviderVersionID{
+			RegistryProviderID: RegistryProviderID{
+				OrganizationName: version.RegistryProvider.Organization.Name,
+				RegistryName:     version.RegistryProvider.RegistryName,
+				Namespace:        version.RegistryProvider.Namespace,
+				Name:             version.RegistryProvider.Name,
+			},
+			Version: version.Version,
+		}
+
+		err := client.RegistryProviderVersions.Delete(ctx, versionId)
+		assert.NoError(t, err)
+	})
+
+	t.Run("with non existing version", func(t *testing.T) {
+		versionId := RegistryProviderVersionID{
+			RegistryProviderID: RegistryProviderID{
+				OrganizationName: provider.Organization.Name,
+				RegistryName:     provider.RegistryName,
+				Namespace:        provider.Namespace,
+				Name:             provider.Name,
+			},
+			Version: "1.0.0",
+		}
+
+		err := client.RegistryProviderVersions.Delete(ctx, versionId)
+		assert.Error(t, err)
+	})
+}
+
+func TestRegistryProviderVersionsRead(t *testing.T) {
+	client := testClient(t)
+	ctx := context.Background()
+
+	t.Run("with valid version", func(t *testing.T) {
+		version, versionCleanup := createRegistryProviderVersion(t, client, nil)
+		defer versionCleanup()
+
+		versionId := RegistryProviderVersionID{
+			RegistryProviderID: RegistryProviderID{
+				OrganizationName: version.RegistryProvider.Organization.Name,
+				RegistryName:     version.RegistryProvider.RegistryName,
+				Namespace:        version.RegistryProvider.Namespace,
+				Name:             version.RegistryProvider.Name,
+			},
+			Version: version.Version,
+		}
+
+		readVersion, err := client.RegistryProviderVersions.Read(ctx, versionId, nil)
+		assert.NoError(t, err)
+		assert.Equal(t, version.ID, readVersion.ID)
+	})
+
+	t.Run("with non existing version", func(t *testing.T) {
+		provider, providerCleanup := createPrivateRegistryProvider(t, client, nil)
+		defer providerCleanup()
+
+		versionId := RegistryProviderVersionID{
+			RegistryProviderID: RegistryProviderID{
+				OrganizationName: provider.Organization.Name,
+				RegistryName:     provider.RegistryName,
+				Namespace:        provider.Namespace,
+				Name:             provider.Name,
+			},
+			Version: "1.0.0",
+		}
+
+		_, err := client.RegistryProviderVersions.Read(ctx, versionId, nil)
+		assert.Error(t, err)
+	})
+
 }
