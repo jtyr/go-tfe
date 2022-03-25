@@ -49,6 +49,50 @@ type RegistryProviderVersion struct {
 	Links map[string]interface{} `jsonapi:"links,omitempty"`
 }
 
+func (v RegistryProviderVersion) ShasumsUploadURL() (string, error) {
+	uploadURL, ok := v.Links["shasums-upload"].(string)
+	if !ok {
+		return uploadURL, fmt.Errorf("the Registry Provider Version does not contain a shasums upload link")
+	}
+	if uploadURL == "" {
+		return uploadURL, fmt.Errorf("the Registry Provider Version shasums upload URL is empty")
+	}
+	return uploadURL, nil
+}
+
+func (v RegistryProviderVersion) ShasumsSigUploadURL() (string, error) {
+	uploadURL, ok := v.Links["shasums-sig-upload"].(string)
+	if !ok {
+		return uploadURL, fmt.Errorf("the Registry Provider Version does not contain a shasums sig upload link")
+	}
+	if uploadURL == "" {
+		return uploadURL, fmt.Errorf("the Registry Provider Version shasums sig upload URL is empty")
+	}
+	return uploadURL, nil
+}
+
+func (v RegistryProviderVersion) ShasumsDownloadURL() (string, error) {
+	downloadURL, ok := v.Links["shasums-download"].(string)
+	if !ok {
+		return downloadURL, fmt.Errorf("the Registry Provider Version does not contain a shasums download link")
+	}
+	if downloadURL == "" {
+		return downloadURL, fmt.Errorf("the Registry Provider Version shasums download URL is empty")
+	}
+	return downloadURL, nil
+}
+
+func (v RegistryProviderVersion) ShasumsSigDownloadURL() (string, error) {
+	downloadURL, ok := v.Links["shasums-sig-download"].(string)
+	if !ok {
+		return downloadURL, fmt.Errorf("the Registry Provider Version does not contain a shasums sig download link")
+	}
+	if downloadURL == "" {
+		return downloadURL, fmt.Errorf("the Registry Provider Version shasums sig download URL is empty")
+	}
+	return downloadURL, nil
+}
+
 // RegistryProviderID is the multi key ID for addressing a provider
 type RegistryProviderVersionID struct {
 	RegistryProviderID

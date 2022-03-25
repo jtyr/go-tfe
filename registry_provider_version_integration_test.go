@@ -120,6 +120,10 @@ func TestRegistryProviderVersionsCreate(t *testing.T) {
 		})
 
 		t.Run("includes upload links", func(t *testing.T) {
+			_, err := prvv.ShasumsUploadURL()
+			assert.NoError(t, err)
+			_, err = prvv.ShasumsSigUploadURL()
+			assert.NoError(t, err)
 			expectedLinks := []string{
 				"shasums-upload",
 				"shasums-sig-upload",
@@ -128,6 +132,13 @@ func TestRegistryProviderVersionsCreate(t *testing.T) {
 				_, ok := prvv.Links[l].(string)
 				assert.True(t, ok, "Expect upload link: %s", l)
 			}
+		})
+
+		t.Run("doesn't include download links", func(t *testing.T) {
+			_, err := prvv.ShasumsDownloadURL()
+			assert.Error(t, err)
+			_, err = prvv.ShasumsSigDownloadURL()
+			assert.Error(t, err)
 		})
 	})
 
@@ -349,6 +360,28 @@ func TestRegistryProviderVersionsRead(t *testing.T) {
 		readVersion, err := client.RegistryProviderVersions.Read(ctx, versionId, nil)
 		assert.NoError(t, err)
 		assert.Equal(t, version.ID, readVersion.ID)
+		assert.Equal(t, version.Version, readVersion.Version)
+		assert.Equal(t, version.KeyID, readVersion.KeyID)
+
+		t.Run("relationships are properly decoded", func(t *testing.T) {
+			assert.Equal(t, version.RegistryProvider.ID, readVersion.RegistryProvider.ID)
+		})
+
+		t.Run("timestamps are properly decoded", func(t *testing.T) {
+			assert.NotEmpty(t, readVersion.CreatedAt)
+			assert.NotEmpty(t, readVersion.UpdatedAt)
+		})
+
+		t.Run("includes upload links", func(t *testing.T) {
+			expectedLinks := []string{
+				"shasums-upload",
+				"shasums-sig-upload",
+			}
+			for _, l := range expectedLinks {
+				_, ok := readVersion.Links[l].(string)
+				assert.True(t, ok, "Expect upload link: %s", l)
+			}
+		})
 	})
 
 	t.Run("with non existing version", func(t *testing.T) {
