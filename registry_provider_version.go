@@ -177,7 +177,7 @@ func (r *registryProviderVersions) Create(ctx context.Context, providerId Regist
 		return nil, err
 	}
 	if providerId.RegistryName != PrivateRegistry {
-		return nil, ErrPrivateRegistryRequired
+		return nil, ErrRequiredPrivateRegistry
 	}
 	if err := options.valid(); err != nil {
 		return nil, err
