@@ -9,7 +9,7 @@ import (
 // Compile-time proof of interface implementation.
 var _ RegistryProviderVersions = (*registryProviderVersions)(nil)
 
-// RegistryProviders describes all the registry provider related methods that the Terraform
+// RegistryProviderVersions describes all the registry provider related methods that the Terraform
 // Enterprise API supports.
 //
 // TFE API docs: https://www.terraform.io/docs/cloud/api/providers.html

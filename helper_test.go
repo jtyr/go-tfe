@@ -763,7 +763,9 @@ func createPrivateRegistryProvider(t *testing.T, client *Client, org *Organizati
 		Namespace:    org.Name,
 		RegistryName: PrivateRegistry,
 	}
+
 	prv, err := client.RegistryProviders.Create(ctx, org.Name, options)
+
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -771,12 +773,13 @@ func createPrivateRegistryProvider(t *testing.T, client *Client, org *Organizati
 	prv.Organization = org
 
 	return prv, func() {
-		id := RegistryProviderID{
+		id := RegistryProviderID {
 			OrganizationName: org.Name,
 			RegistryName:     prv.RegistryName,
 			Namespace:        prv.Namespace,
 			Name:             prv.Name,
 		}
+
 		if err := client.RegistryProviders.Delete(ctx, id); err != nil {
 			t.Errorf("Error destroying registry provider! WARNING: Dangling resources\n"+
 				"may exist! The full error is shown below.\n\n"+
@@ -803,7 +806,9 @@ func createPublicRegistryProvider(t *testing.T, client *Client, org *Organizatio
 		Namespace:    "tst-namespace-" + randomString(t),
 		RegistryName: PublicRegistry,
 	}
+
 	prv, err := client.RegistryProviders.Create(ctx, org.Name, options)
+
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -811,12 +816,13 @@ func createPublicRegistryProvider(t *testing.T, client *Client, org *Organizatio
 	prv.Organization = org
 
 	return prv, func() {
-		id := RegistryProviderID{
+		id := RegistryProviderID {
 			OrganizationName: org.Name,
 			RegistryName:     prv.RegistryName,
 			Namespace:        prv.Namespace,
 			Name:             prv.Name,
 		}
+
 		if err := client.RegistryProviders.Delete(ctx, id); err != nil {
 			t.Errorf("Error destroying registry provider! WARNING: Dangling resources\n"+
 				"may exist! The full error is shown below.\n\n"+
@@ -836,7 +842,7 @@ func createRegistryProviderVersion(t *testing.T, client *Client, provider *Regis
 		provider, providerCleanup = createPrivateRegistryProvider(t, client, nil)
 	}
 
-	providerId := RegistryProviderID{
+	providerID := RegistryProviderID {
 		OrganizationName: provider.Organization.Name,
 		RegistryName:     provider.RegistryName,
 		Namespace:        provider.Namespace,
@@ -849,7 +855,9 @@ func createRegistryProviderVersion(t *testing.T, client *Client, provider *Regis
 		Version: randomSemver(t),
 		KeyID:   randomString(t),
 	}
-	prvv, err := client.RegistryProviderVersions.Create(ctx, providerId, options)
+
+	prvv, err := client.RegistryProviderVersions.Create(ctx, providerID, options)
+
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -857,10 +865,11 @@ func createRegistryProviderVersion(t *testing.T, client *Client, provider *Regis
 	prvv.RegistryProvider = provider
 
 	return prvv, func() {
-		id := RegistryProviderVersionID{
+		id := RegistryProviderVersionID {
 			Version:            options.Version,
-			RegistryProviderID: providerId,
+			RegistryProviderID: providerID,
 		}
+
 		if err := client.RegistryProviderVersions.Delete(ctx, id); err != nil {
 			t.Errorf("Error destroying registry provider version! WARNING: Dangling resources\n"+
 				"may exist! The full error is shown below.\n\n"+
