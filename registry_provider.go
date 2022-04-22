@@ -21,10 +21,10 @@ type RegistryProviders interface {
 	Create(ctx context.Context, organization string, options RegistryProviderCreateOptions) (*RegistryProvider, error)
 
 	// Read a registry provider
-	Read(ctx context.Context, providerId RegistryProviderID, options *RegistryProviderReadOptions) (*RegistryProvider, error)
+	Read(ctx context.Context, providerID RegistryProviderID, options *RegistryProviderReadOptions) (*RegistryProvider, error)
 
 	// Delete a registry provider
-	Delete(ctx context.Context, providerId RegistryProviderID) error
+	Delete(ctx context.Context, providerID RegistryProviderID) error
 }
 
 // registryProviders implements RegistryProviders.
@@ -40,14 +40,6 @@ const (
 	PrivateRegistry RegistryName = "private"
 	PublicRegistry  RegistryName = "public"
 )
-
-func (rn RegistryName) valid() error {
-	switch rn {
-	case PrivateRegistry, PublicRegistry:
-		return nil
-	}
-	return ErrInvalidRegistryName
-}
 
 // RegistryProviderIncludeOps represents which jsonapi include can be used with registry providers
 type RegistryProviderIncludeOps string
@@ -94,12 +86,20 @@ type RegistryProviderList struct {
 	Items []*RegistryProvider
 }
 
-func (o RegistryProviderListOptions) valid() error {
-	return nil
+// RegistryProviderID is the multi key ID for addressing a provider
+type RegistryProviderID struct {
+	OrganizationName string       `jsonapi:"attr,organization-name"`
+	Namespace        string       `jsonapi:"attr,namespace"`
+	Name             string       `jsonapi:"attr,name"`
+	RegistryName     RegistryName `jsonapi:"attr,registry-name"`
+}
+
+type RegistryProviderReadOptions struct {
+	// Include related jsonapi relationships
+	Include *[]RegistryProviderIncludeOps `url:"include,omitempty"`
 }
 
 func (r *registryProviders) List(ctx context.Context, organization string, options *RegistryProviderListOptions) (*RegistryProviderList, error) {
-
 	if !validStringID(&organization) {
 		return nil, ErrInvalidOrg
 	}
@@ -137,19 +137,6 @@ type RegistryProviderCreateOptions struct {
 	RegistryName RegistryName `jsonapi:"attr,registry-name"`
 }
 
-func (o RegistryProviderCreateOptions) valid() error {
-	if !validStringID(&o.Name) {
-		return ErrInvalidName
-	}
-	if !validStringID(&o.Namespace) {
-		return ErrInvalidNamespace
-	}
-	if err := o.RegistryName.valid(); err != nil {
-		return err
-	}
-	return nil
-}
-
 func (r *registryProviders) Create(ctx context.Context, organization string, options RegistryProviderCreateOptions) (*RegistryProvider, error) {
 	if !validStringID(&organization) {
 		return nil, ErrInvalidOrg
@@ -180,12 +167,71 @@ func (r *registryProviders) Create(ctx context.Context, organization string, opt
 	return prv, nil
 }
 
-// RegistryProviderID is the multi key ID for addressing a provider
-type RegistryProviderID struct {
-	OrganizationName string       `jsonapi:"attr,organization-name"`
-	Namespace        string       `jsonapi:"attr,namespace"`
-	Name             string       `jsonapi:"attr,name"`
-	RegistryName     RegistryName `jsonapi:"attr,registry-name"`
+func (r *registryProviders) Read(ctx context.Context, providerID RegistryProviderID, options *RegistryProviderReadOptions) (*RegistryProvider, error) {
+	if err := providerID.valid(); err != nil {
+		return nil, err
+	}
+
+	u := fmt.Sprintf(
+		"organizations/%s/registry-providers/%s/%s/%s",
+		url.QueryEscape(providerID.OrganizationName),
+		url.QueryEscape(string(providerID.RegistryName)),
+		url.QueryEscape(providerID.Namespace),
+		url.QueryEscape(providerID.Name),
+	)
+	req, err := r.client.newRequest("GET", u, options)
+	if err != nil {
+		return nil, err
+	}
+
+	prv := &RegistryProvider{}
+	err = r.client.do(ctx, req, prv)
+	if err != nil {
+		return nil, err
+	}
+
+	return prv, nil
+}
+
+func (r *registryProviders) Delete(ctx context.Context, providerID RegistryProviderID) error {
+	if err := providerID.valid(); err != nil {
+		return err
+	}
+
+	u := fmt.Sprintf(
+		"organizations/%s/registry-providers/%s/%s/%s",
+		url.QueryEscape(providerID.OrganizationName),
+		url.QueryEscape(string(providerID.RegistryName)),
+		url.QueryEscape(providerID.Namespace),
+		url.QueryEscape(providerID.Name),
+	)
+	req, err := r.client.newRequest("DELETE", u, nil)
+	if err != nil {
+		return err
+	}
+
+	return r.client.do(ctx, req, nil)
+}
+
+func (rn RegistryName) valid() error {
+	switch rn {
+	case PrivateRegistry, PublicRegistry:
+		return nil
+	}
+	return ErrInvalidRegistryName
+}
+
+func (o RegistryProviderCreateOptions) valid() error {
+	if !validStringID(&o.Name) {
+		return ErrInvalidName
+	}
+	if !validStringID(&o.Namespace) {
+		return ErrInvalidNamespace
+	}
+	if err := o.RegistryName.valid(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (id RegistryProviderID) valid() error {
@@ -204,53 +250,6 @@ func (id RegistryProviderID) valid() error {
 	return nil
 }
 
-type RegistryProviderReadOptions struct {
-	// Include related jsonapi relationships
-	Include *[]RegistryProviderIncludeOps `url:"include,omitempty"`
-}
-
-func (r *registryProviders) Read(ctx context.Context, providerId RegistryProviderID, options *RegistryProviderReadOptions) (*RegistryProvider, error) {
-	if err := providerId.valid(); err != nil {
-		return nil, err
-	}
-
-	u := fmt.Sprintf(
-		"organizations/%s/registry-providers/%s/%s/%s",
-		url.QueryEscape(providerId.OrganizationName),
-		url.QueryEscape(string(providerId.RegistryName)),
-		url.QueryEscape(providerId.Namespace),
-		url.QueryEscape(providerId.Name),
-	)
-	req, err := r.client.newRequest("GET", u, options)
-	if err != nil {
-		return nil, err
-	}
-
-	prv := &RegistryProvider{}
-	err = r.client.do(ctx, req, prv)
-	if err != nil {
-		return nil, err
-	}
-
-	return prv, nil
-}
-
-func (r *registryProviders) Delete(ctx context.Context, providerId RegistryProviderID) error {
-	if err := providerId.valid(); err != nil {
-		return err
-	}
-
-	u := fmt.Sprintf(
-		"organizations/%s/registry-providers/%s/%s/%s",
-		url.QueryEscape(providerId.OrganizationName),
-		url.QueryEscape(string(providerId.RegistryName)),
-		url.QueryEscape(providerId.Namespace),
-		url.QueryEscape(providerId.Name),
-	)
-	req, err := r.client.newRequest("DELETE", u, nil)
-	if err != nil {
-		return err
-	}
-
-	return r.client.do(ctx, req, nil)
+func (o RegistryProviderListOptions) valid() error {
+	return nil
 }
