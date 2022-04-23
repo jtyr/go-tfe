@@ -17,13 +17,13 @@ type RegistryProviders interface {
 	// List all the providers within an organization.
 	List(ctx context.Context, organization string, options *RegistryProviderListOptions) (*RegistryProviderList, error)
 
-	// Create a registry provider
+	// Create a registry provider.
 	Create(ctx context.Context, organization string, options RegistryProviderCreateOptions) (*RegistryProvider, error)
 
-	// Read a registry provider
+	// Read a registry provider.
 	Read(ctx context.Context, providerID RegistryProviderID, options *RegistryProviderReadOptions) (*RegistryProvider, error)
 
-	// Delete a registry provider
+	// Delete a registry provider.
 	Delete(ctx context.Context, providerID RegistryProviderID) error
 }
 
@@ -52,12 +52,12 @@ const (
 // RegistryProvider represents a registry provider
 type RegistryProvider struct {
 	ID           string                       `jsonapi:"primary,registry-providers"`
-	Namespace    string                       `jsonapi:"attr,namespace"`
 	Name         string                       `jsonapi:"attr,name"`
-	RegistryName RegistryName                 `jsonapi:"attr,registry-name"`
-	Permissions  *RegistryProviderPermissions `jsonapi:"attr,permissions"`
+	Namespace    string                       `jsonapi:"attr,namespace"`
 	CreatedAt    string                       `jsonapi:"attr,created-at"`
 	UpdatedAt    string                       `jsonapi:"attr,updated-at"`
+	RegistryName RegistryName                 `jsonapi:"attr,registry-name"`
+	Permissions  *RegistryProviderPermissions `jsonapi:"attr,permissions"`
 
 	// Relations
 	Organization             *Organization              `jsonapi:"relation,organization"`
@@ -70,10 +70,13 @@ type RegistryProviderPermissions struct {
 
 type RegistryProviderListOptions struct {
 	ListOptions
+
 	// A query string to filter by registry_name
 	RegistryName RegistryName `url:"filter[registry_name],omitempty"`
+
 	// A query string to filter by organization
 	OrganizationName string `url:"filter[organization_name],omitempty"`
+
 	// A query string to do a fuzzy search
 	Search string `url:"q,omitempty"`
 
@@ -89,9 +92,9 @@ type RegistryProviderList struct {
 // RegistryProviderID is the multi key ID for addressing a provider
 type RegistryProviderID struct {
 	OrganizationName string       `jsonapi:"attr,organization-name"`
+	RegistryName     RegistryName `jsonapi:"attr,registry-name"`
 	Namespace        string       `jsonapi:"attr,namespace"`
 	Name             string       `jsonapi:"attr,name"`
-	RegistryName     RegistryName `jsonapi:"attr,registry-name"`
 }
 
 type RegistryProviderReadOptions struct {
@@ -132,8 +135,8 @@ type RegistryProviderCreateOptions struct {
 	// https://jsonapi.org/format/#crud-creating
 	Type string `jsonapi:"primary,registry-providers"`
 
-	Namespace    string       `jsonapi:"attr,namespace"`
 	Name         string       `jsonapi:"attr,name"`
+	Namespace    string       `jsonapi:"attr,namespace"`
 	RegistryName RegistryName `jsonapi:"attr,registry-name"`
 }
 
@@ -141,9 +144,11 @@ func (r *registryProviders) Create(ctx context.Context, organization string, opt
 	if !validStringID(&organization) {
 		return nil, ErrInvalidOrg
 	}
+
 	if err := options.valid(); err != nil {
 		return nil, err
 	}
+
 	// Private providers must match their namespace and organization name
 	// This is enforced by the API as well
 	if options.RegistryName == PrivateRegistry && organization != options.Namespace {
@@ -158,6 +163,7 @@ func (r *registryProviders) Create(ctx context.Context, organization string, opt
 	if err != nil {
 		return nil, err
 	}
+
 	prv := &RegistryProvider{}
 	err = r.client.do(ctx, req, prv)
 	if err != nil {
