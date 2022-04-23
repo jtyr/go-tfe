@@ -62,10 +62,15 @@ type RegistryProvider struct {
 	// Relations
 	Organization             *Organization              `jsonapi:"relation,organization"`
 	RegistryProviderVersions []*RegistryProviderVersion `jsonapi:"relation,registry-provider-versions"`
+
+	// Links
+	Links map[string]interface{} `jsonapi:"links,omitempty"`
 }
 
+// TODO - verify the permissions and which are required
 type RegistryProviderPermissions struct {
-	CanDelete bool `jsonapi:"attr,can-delete"`
+	CanDelete bool `jsonapi:"attr,can-delete,omitempty"`
+	CanUploadAsset bool `jsonapi:"attr,can-upload-asset,omitempty"`
 }
 
 type RegistryProviderListOptions struct {
