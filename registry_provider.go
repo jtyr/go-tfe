@@ -67,7 +67,6 @@ type RegistryProvider struct {
 	Links map[string]interface{} `jsonapi:"links,omitempty"`
 }
 
-// TODO - verify the permissions and which are required
 type RegistryProviderPermissions struct {
 	CanDelete bool `jsonapi:"attr,can-delete,omitempty"`
 	CanUploadAsset bool `jsonapi:"attr,can-upload-asset,omitempty"`
@@ -154,7 +153,7 @@ func (r *registryProviders) Create(ctx context.Context, organization string, opt
 		return nil, err
 	}
 
-	// Private providers must match their namespace and organization name
+	// For private providers, the organization name and namespace must be the same.
 	// This is enforced by the API as well
 	if options.RegistryName == PrivateRegistry && organization != options.Namespace {
 		return nil, ErrInvalidPrivateProviderNamespaceDoesntMatchOrganization

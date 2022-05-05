@@ -24,10 +24,12 @@ func TestRegistryProvidersList(t *testing.T) {
 		providers := make([]*RegistryProvider, 0)
 		// these providers will be destroyed when the org is cleaned up
 		for i := 0; i < createN; i++ {
+			// Create public providers
 			providerTest, _ := createPublicRegistryProvider(t, client, orgTest)
 			providers = append(providers, providerTest)
 		}
 		for i := 0; i < createN; i++ {
+			// Create private providers
 			providerTest, _ := createPrivateRegistryProvider(t, client, orgTest)
 			providers = append(providers, providerTest)
 		}
