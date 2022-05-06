@@ -197,6 +197,9 @@ type VariableUpdateOptions struct {
 	// Whether to evaluate the value of the variable as a string of HCL code.
 	HCL *bool `jsonapi:"attr,hcl,omitempty"`
 
+	// Whether this is a Terraform or environment variable.
+	Category *CategoryType `jsonapi:"attr,category,omitempty"`
+
 	// Whether the value is sensitive.
 	Sensitive *bool `jsonapi:"attr,sensitive,omitempty"`
 }
